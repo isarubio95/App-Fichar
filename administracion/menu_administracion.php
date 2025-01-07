@@ -1,6 +1,8 @@
 <?php
 // Conexión a la base de datos
 require_once '../conexion.php';
+require_once 'festivos.php';
+$festivos = obtenerFestivos($conexion);
 
 // Manejo de acciones si se envían datos
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -25,12 +27,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($_POST['id_empleado'])) {
                     $conexion->beginTransaction();
                     try {
-                         // Eliminar registros relacionados en resumen_diario
-                        $queryResumen = "DELETE FROM resumen_diario WHERE id_empleado = :id_empleado";
-                        $stmtResumen = $conexion->prepare($queryResumen);
-                        $stmtResumen->bindParam(':id_empleado', $_POST['id_empleado'], PDO::PARAM_INT);
-                        $stmtResumen->execute();
-
                         // Eliminar registros relacionados en Fichaje
                         $queryFichaje = "DELETE FROM Fichaje WHERE id_empleado = :id_empleado";
                         $stmtFichaje = $conexion->prepare($queryFichaje);
@@ -91,6 +87,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("Debe seleccionar un empleado y al menos un campo para modificar.");
                 }
             }
+            else if ($_POST['accion'] === 'crear_festivo') {
+                // Crear festivo
+                if (!empty($_POST['fecha']) && !empty($_POST['descripcion'])) {
+                    crearFestivo($conexion, $_POST['fecha'], $_POST['descripcion']);
+                    $mensaje = "Festivo creado exitosamente.";
+                    // Redirigir a la misma página para recargarla
+                    header("Location: " . $_SERVER['PHP_SELF'] . "#tabla-festivos");
+                    exit;
+                } else {
+                    throw new Exception("Todos los campos son obligatorios para crear un festivo.");
+                }
+            } 
+            else if ($_POST['accion'] === 'borrar_festivo') {
+                // Borrar festivo
+                if (!empty($_POST['id_festivo'])) {
+                    borrarFestivo($conexion, $_POST['id_festivo']);
+                    $mensaje = "Festivo borrado exitosamente.";
+                    // Redirigir a la misma página para recargarla
+                    header("Location: " . $_SERVER['PHP_SELF'] . "#tabla-festivos");
+                    exit;
+                } else {
+                    throw new Exception("Debe seleccionar un festivo para borrar.");
+                }
+            }
         }
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -108,12 +128,19 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración de Empleados</title>
-    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
     <header>
         <h1>Menú de Administración</h1>
     </header>
+    <nav>
+        <ul>
+            <li><a href="../index.php">Inicio</a></li>
+            <li><span>></span></li>
+            <li><a href="">Administración</a></li>
+        </ul>
+    </nav>
     <main>
         <?php if (!empty($mensaje)): ?>
             <p class="success"><?= htmlspecialchars($mensaje) ?></p>
@@ -190,9 +217,47 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
                 </form>
             </div>
         </section>
-        <div>
-            <a href="../index.php" class="btn">Volver al Menú Principal</a>
-        </div>
+          
+        <section class="container">           
+            <h2>Crear Festivo</h2>
+            <form method="POST">
+                <input type="hidden" name="accion" value="crear_festivo">
+                <div class="container-row">
+                    <label for="fecha">Fecha:</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                    <label for="descripcion">Descripción:</label>
+                    <input type="text" id="descripcion" name="descripcion" required>
+                    <button type="submit">Crear</button>
+                </div>                                  
+            </form>               
+            <div>
+                <h2>Lista de festivos</h2>
+                <table id="tabla-festivos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Festivo</th>
+                            <th>Borrar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($festivos as $festivo): ?>
+                            <tr>                            
+                                <td><?= htmlspecialchars($festivo['fecha']) ?></td>
+                                <td><?= htmlspecialchars($festivo['descripcion']) ?></td>   
+                                <td>
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea borrar este festivo?');">
+                                        <input type="hidden" name="accion" value="borrar_festivo">
+                                        <input type="hidden" name="id_festivo" value="<?= htmlspecialchars($festivo['id_festivo']) ?>">
+                                        <button type="submit" class="btn-danger">Borrar</button>
+                                    </form>
+                                </td>                        
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>           
+        </section>
     </main>
     <footer>
         <p>&copy; 2024 Administración de Empleados</p>

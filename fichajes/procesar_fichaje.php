@@ -1,6 +1,7 @@
 <?php
 // Conexión a la base de datos
 require_once '../conexion.php';
+require_once 'fichajes.php';
 
 // Verificar que los datos fueron enviados correctamente
 if (!isset($_POST['id_empleado'], $_POST['accion'], $_POST['contrasena']) || empty($_POST['id_empleado']) || empty($_POST['accion']) || empty($_POST['contrasena'])) {
@@ -86,11 +87,8 @@ try {
         $updateStmt->bindParam(':fecha', $fecha);
         $updateStmt->execute();
     }
-
-    echo "<script>
-        alert('Fichaje registrado correctamente.');
-        window.location.href='fichajes.php';
-    </script>";
+    echo '<p id="confirmationMessage">Fichaje realizado correctamente<p>';
+        
 } catch (Exception $e) {
     error_log("Error al procesar el fichaje: " . $e->getMessage(), 3, "C:/xampp/php_errors.log");
     exit;

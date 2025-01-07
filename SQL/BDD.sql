@@ -20,7 +20,7 @@ CREATE TABLE Fichaje (
     entrada_tarde TIME DEFAULT NULL,
     salida_tarde TIME DEFAULT NULL,
     FOREIGN KEY (id_empleado) REFERENCES Empleado(id_empleado)
-    ON DELETE CASCADE;
+    ON DELETE CASCADE
 );
 
 CREATE TABLE Eventos_especiales (
@@ -31,6 +31,13 @@ CREATE TABLE Eventos_especiales (
     tipo_evento ENUM('Vacaciones', 'Libranza', 'Baja', 'Permiso') NOT NULL,
     descripcion TEXT, -- Opcional, para detalles del evento
     FOREIGN KEY (id_empleado) REFERENCES Empleado(id_empleado)
+);
+
+CREATE TABLE Festivo (
+    id_festivo INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATE NOT NULL,
+    descripcion VARCHAR(255) NOT NULL,
+    ano INT NOT NULL
 );
 
 INSERT INTO Empleado (nombre, apellidos, contrasena) VALUES

@@ -1,0 +1,3 @@
+Quitar el punto y coma en el PHP.ini de las siguientes extensiones:
+extension=gd
+extension=zip

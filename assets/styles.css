@@ -16,7 +16,7 @@ body {
 }
 
 header {
-    background-color: #638bd3;
+    background-color: #3f5f9b;
     color: #fff;
     padding: 20px;
     text-align: center;
@@ -59,11 +59,11 @@ nav ul {
 }
 
 nav ul li a {
-    color: #0c640f;
+    color: #14767f;
     font-size: 1.2em;
     text-decoration: none;
     font-weight: normal;
-    transition: color 0.3s, text-decoration 0.3s;
+    transition: text-decoration 0.3s;
 }
 
 nav ul li a:hover {
@@ -84,7 +84,7 @@ i {
     margin-top: 2em;
     max-width: fit-content;
     align-items: center; /* Alinea horizontalmente */
-    padding: 30px; /* Añade un poco de espacio alrededor del contenido */
+    padding: 30px; 
     border-radius: 8px;
 }
 
@@ -102,6 +102,14 @@ i {
     margin-top: 0.6em;
 }
 
+.container-horizontal {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    gap: 5em;
+    background-color: honeydew;
+}
 
 /* Forms */
 form {
@@ -132,7 +140,7 @@ input:focus {
 }
 
 button {
-    background-color: #d0d0d0;
+    background-color: #d6d6d6;
     width: 300px;
     height: 60px;
     border: none;
@@ -140,13 +148,16 @@ button {
     font-weight: bold;
     text-decoration: none;
     border: 1px solid rgba(0, 0, 0, 0.201);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Sombra sutil */
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
-
 button:hover {
     background-color: #afafaf;
     transform: scale(1.02);
+}
+button:active {
+    transform: translateY(0); /* Sin elevación */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra más pequeña */
 }
 
 .borrar {

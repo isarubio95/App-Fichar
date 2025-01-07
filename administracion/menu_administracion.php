@@ -117,9 +117,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Obtener lista de empleados
-$query = "SELECT id_empleado, nombre, apellidos FROM Empleado ORDER BY apellidos, nombre";
-$empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
+// Obtener todos los empleados
+$queryEmpleados = "SELECT id_empleado, nombre, apellidos FROM Empleado";
+$empleados = $conexion->query($queryEmpleados)->fetchAll(PDO::FETCH_ASSOC);
+
+// Inicializar variables
+$fichajes = [];
+$trabajadorSeleccionado = null;
+$fechaSeleccionada = null;
+
+// Manejo del formulario
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_empleado'], $_POST['fecha'])) {
+    $trabajadorSeleccionado = (int)$_POST['id_empleado'];
+    $fechaSeleccionada = $_POST['fecha'];
+
+    // Obtener los fichajes del trabajador para la fecha seleccionada
+    $queryFichajes = "
+        SELECT entrada_manana, salida_manana, entrada_tarde, salida_tarde
+        FROM Fichaje
+        WHERE id_empleado = :id_empleado AND fecha = :fecha
+    ";
+    $stmt = $conexion->prepare($queryFichajes);
+    $stmt->bindParam(':id_empleado', $trabajadorSeleccionado, PDO::PARAM_INT);
+    $stmt->bindParam(':fecha', $fechaSeleccionada);
+    $stmt->execute();
+    $fichajes = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Actualizar fichajes
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_fichajes'])) {
+    $entradaManana = $_POST['entrada_manana'] ?: null;
+    $salidaManana = $_POST['salida_manana'] ?: null;
+    $entradaTarde = $_POST['entrada_tarde'] ?: null;
+    $salidaTarde = $_POST['salida_tarde'] ?: null;
+
+    if ($trabajadorSeleccionado && $fechaSeleccionada) {
+        // Verificar si ya existen fichajes para ese día
+        $queryVerificar = "SELECT COUNT(*) FROM Fichaje WHERE id_empleado = :id_empleado AND fecha = :fecha";
+        $stmtVerificar = $conexion->prepare($queryVerificar);
+        $stmtVerificar->bindParam(':id_empleado', $trabajadorSeleccionado, PDO::PARAM_INT);
+        $stmtVerificar->bindParam(':fecha', $fechaSeleccionada);
+        $stmtVerificar->execute();
+        $existeFichaje = $stmtVerificar->fetchColumn();
+
+        if ($existeFichaje) {
+            // Actualizar los fichajes
+            $queryActualizar = "
+                UPDATE Fichaje
+                SET entrada_manana = :entrada_manana, salida_manana = :salida_manana,
+                    entrada_tarde = :entrada_tarde, salida_tarde = :salida_tarde
+                WHERE id_empleado = :id_empleado AND fecha = :fecha
+            ";
+            $stmtActualizar = $conexion->prepare($queryActualizar);
+        } else {
+            // Insertar nuevos fichajes
+            $queryActualizar = "
+                INSERT INTO Fichaje (id_empleado, fecha, entrada_manana, salida_manana, entrada_tarde, salida_tarde)
+                VALUES (:id_empleado, :fecha, :entrada_manana, :salida_manana, :entrada_tarde, :salida_tarde)
+            ";
+            $stmtActualizar = $conexion->prepare($queryActualizar);
+        }
+
+        $stmtActualizar->bindParam(':id_empleado', $trabajadorSeleccionado, PDO::PARAM_INT);
+        $stmtActualizar->bindParam(':fecha', $fechaSeleccionada);
+        $stmtActualizar->bindParam(':entrada_manana', $entradaManana);
+        $stmtActualizar->bindParam(':salida_manana', $salidaManana);
+        $stmtActualizar->bindParam(':entrada_tarde', $entradaTarde);
+        $stmtActualizar->bindParam(':salida_tarde', $salidaTarde);
+        $stmtActualizar->execute();
+
+        
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -169,7 +238,7 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
             <div class="container">
                 <h2>Crear Empleado</h2>
-                <form method="POST">
+                <form method="POST" id="crearEmpleadoForm">
                     <input type="hidden" name="accion" value="crear">
                     <label for="nombre">Nombre:</label>
                     <input type="text" id="nombre" name="nombre" required>
@@ -180,6 +249,9 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
                     <label for="contrasena">Contraseña:</label>
                     <input type="password" id="contrasena" name="contrasena" required>
 
+                    <label for="confirmar_contrasena">Confirmar Contraseña:</label>
+                    <input type="password" id="confirmar_contrasena" name="confirmar_contrasena" required>
+
                     <label for="horas_jornada">Horas por jornada:</label>
                     <input type="number" id="horas_jornada" name="horas_jornada" step="0.1" required>
 
@@ -189,7 +261,7 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
             <div class="container">
                 <h2>Modificar Empleado</h2>
-                <form method="POST">
+                <form method="POST" id="modificarEmpleadoForm">
                     <input type="hidden" name="accion" value="modificar">
                     <label for="id_empleado_modificar">Seleccione un Empleado:</label>
                     <select id="id_empleado_modificar" name="id_empleado" required>
@@ -210,6 +282,9 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
                     <label for="contrasena_modificar">Nueva Contraseña:</label>
                     <input type="password" id="contrasena_modificar" name="contrasena">
 
+                    <label for="confirmar_contrasena_modificar">Confirmar Contraseña:</label>
+                    <input type="password" id="confirmar_contrasena_modificar" name="confirmar_contrasena">
+
                     <label for="horas_jornada_modificar">Nuevas Horas por jornada:</label>
                     <input type="number" id="horas_jornada_modificar" name="horas_jornada" step="0.1">
 
@@ -217,47 +292,107 @@ $empleados = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
                 </form>
             </div>
         </section>
-          
-        <section class="container">           
-            <h2>Crear Festivo</h2>
-            <form method="POST">
-                <input type="hidden" name="accion" value="crear_festivo">
-                <div class="container-row">
+        
+        <section class="container-row" style="margin: 20px 0 30px 0">
+            <div class="container">
+                <h2>Insertar o Actualizar Fichajes</h2>
+                <form method="POST" action="#fichajesForm" id="fichajesForm">
+                    <label for="id_empleado">Seleccione un Trabajador:</label>
+                    <select id="id_empleado" name="id_empleado" required>
+                        <option value="">Seleccione</option>
+                        <?php foreach ($empleados as $empleado): ?>
+                            <option value="<?= $empleado['id_empleado'] ?>" <?= ($trabajadorSeleccionado == $empleado['id_empleado']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($empleado['nombre'] . ' ' . $empleado['apellidos']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <label for="fecha">Seleccione la Fecha:</label>
+                    <input type="date" id="fecha" name="fecha" value="<?= htmlspecialchars($fechaSeleccionada) ?>" required>
+
+                    <button type="submit">Cargar Fichajes</button>
+                </form>
+
+                <?php if ($trabajadorSeleccionado && $fechaSeleccionada): ?>
+                    <h3>Fichajes para <?= htmlspecialchars($fechaSeleccionada) ?></h3>
+                    <form method="POST">
+                        <input type="hidden" name="id_empleado" value="<?= $trabajadorSeleccionado ?>">
+                        <input type="hidden" name="fecha" value="<?= htmlspecialchars($fechaSeleccionada) ?>">
+                        <input type="hidden" name="actualizar_fichajes" value="1">
+
+                        <label for="entrada_manana">Entrada Mañana:</label>
+                        <input type="time" id="entrada_manana" name="entrada_manana" value="<?= htmlspecialchars($fichajes['entrada_manana'] ?? '') ?>">
+
+                        <label for="salida_manana">Salida Mañana:</label>
+                        <input type="time" id="salida_manana" name="salida_manana" value="<?= htmlspecialchars($fichajes['salida_manana'] ?? '') ?>">
+
+                        <label for="entrada_tarde">Entrada Tarde:</label>
+                        <input type="time" id="entrada_tarde" name="entrada_tarde" value="<?= htmlspecialchars($fichajes['entrada_tarde'] ?? '') ?>">
+
+                        <label for="salida_tarde">Salida Tarde:</label>
+                        <input type="time" id="salida_tarde" name="salida_tarde" value="<?= htmlspecialchars($fichajes['salida_tarde'] ?? '') ?>">
+
+                        <button type="submit">Guardar Cambios</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+            
+            <div class="container">           
+                <h2>Crear Festivo</h2>
+                <form method="POST">
+                    <input type="hidden" name="accion" value="crear_festivo">      
                     <label for="fecha">Fecha:</label>
                     <input type="date" id="fecha" name="fecha" required>
                     <label for="descripcion">Descripción:</label>
                     <input type="text" id="descripcion" name="descripcion" required>
-                    <button type="submit">Crear</button>
-                </div>                                  
-            </form>               
-            <div>
-                <h2>Lista de festivos</h2>
-                <table id="tabla-festivos">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Festivo</th>
-                            <th>Borrar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($festivos as $festivo): ?>
-                            <tr>                            
-                                <td><?= htmlspecialchars($festivo['fecha']) ?></td>
-                                <td><?= htmlspecialchars($festivo['descripcion']) ?></td>   
-                                <td>
-                                    <form method="POST" style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea borrar este festivo?');">
-                                        <input type="hidden" name="accion" value="borrar_festivo">
-                                        <input type="hidden" name="id_festivo" value="<?= htmlspecialchars($festivo['id_festivo']) ?>">
-                                        <button type="submit" class="btn-danger">Borrar</button>
-                                    </form>
-                                </td>                        
+                    <button type="submit">Crear</button>                                              
+                </form>               
+                <div>
+                    <h2>Lista de festivos</h2>
+                    <table id="tabla-festivos">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Festivo</th>
+                                <th>Borrar</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>           
-        </section>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($festivos as $festivo): ?>
+                                <tr>                            
+                                    <td><?= htmlspecialchars($festivo['fecha']) ?></td>
+                                    <td><?= htmlspecialchars($festivo['descripcion']) ?></td>   
+                                    <td>
+                                        <form method="POST" onsubmit="return confirm('¿Está seguro de que desea borrar este festivo?');">
+                                            <input type="hidden" name="accion" value="borrar_festivo">
+                                            <input type="hidden" name="id_festivo" value="<?= htmlspecialchars($festivo['id_festivo']) ?>">
+                                            <button type="submit" class="btn-danger">Borrar</button>
+                                        </form>
+                                    </td>                        
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>   
+            </div>   
+        </section>     
+        <script>
+            function validarContraseñas(formId, passwordId, confirmPasswordId) {
+                const form = document.getElementById(formId);
+                const password = document.getElementById(passwordId);
+                const confirmPassword = document.getElementById(confirmPasswordId);
+
+                form.addEventListener('submit', (event) => {
+                    if (password.value !== confirmPassword.value) {
+                        event.preventDefault(); // Evita el envío del formulario
+                        alert('Las contraseñas no coinciden. Por favor, verifica.');
+                    }
+                });
+            }
+            // Validar formularios de creación y modificación
+            validarContraseñas('crearEmpleadoForm', 'contrasena', 'confirmar_contrasena');
+            validarContraseñas('modificarEmpleadoForm', 'contrasena_modificar', 'confirmar_contrasena_modificar');
+        </script>           
     </main>
     <footer>
         <p>&copy; 2024 Administración de Empleados</p>

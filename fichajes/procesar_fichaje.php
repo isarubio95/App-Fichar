@@ -16,6 +16,21 @@ $hora_actual = date('H:i:s');
 $fecha = date('Y-m-d');
 $periodo = (date('H') < 15) ? 'manana' : 'tarde';
 
+// Horarios límite
+$hora_limite_manana = '09:50:00';
+$hora_limite_tarde = '16:20:00';
+
+// Determinar la hora a grabar según el periodo y la hora actual
+if ($accion === 'entrada') {
+    $hora_a_grabar = ($periodo === 'manana')
+        ? (strtotime($hora_actual) <= strtotime($hora_limite_manana) ? $hora_limite_manana : $hora_actual)
+        : (strtotime($hora_actual) <= strtotime($hora_limite_tarde) ? $hora_limite_tarde : $hora_actual);
+} else {
+    // Para salidas, siempre grabamos la hora actual
+    $hora_a_grabar = $hora_actual;
+}
+
+
 // Verificar si el empleado tiene un evento especial registrado para hoy
 $queryEventoEspecial = "SELECT * FROM Eventos_especiales WHERE id_empleado = :id_empleado AND :fecha BETWEEN fecha_inicio AND fecha_fin";
 $stmtEventoEspecial = $conexion->prepare($queryEventoEspecial);
@@ -72,17 +87,17 @@ try {
     if (!$fichajeExistente) {
         // Insertar un nuevo registro si no existe
         $insertQuery = "INSERT INTO Fichaje (id_empleado, fecha, $campo_fichaje)
-                        VALUES (:id_empleado, :fecha, :hora_actual)";
+                        VALUES (:id_empleado, :fecha, :hora_a_grabar)";
         $insertStmt = $conexion->prepare($insertQuery);
         $insertStmt->bindParam(':id_empleado', $id_empleado, PDO::PARAM_INT);
         $insertStmt->bindParam(':fecha', $fecha);
-        $insertStmt->bindParam(':hora_actual', $hora_actual);
+        $insertStmt->bindParam(':hora_a_grabar', $hora_a_grabar);
         $insertStmt->execute();
     } else {
         // Actualizar el campo correspondiente
-        $updateQuery = "UPDATE Fichaje SET $campo_fichaje = :hora_actual WHERE id_empleado = :id_empleado AND fecha = :fecha";
+        $updateQuery = "UPDATE Fichaje SET $campo_fichaje = :hora_a_grabar WHERE id_empleado = :id_empleado AND fecha = :fecha";
         $updateStmt = $conexion->prepare($updateQuery);
-        $updateStmt->bindParam(':hora_actual', $hora_actual);
+        $updateStmt->bindParam(':hora_a_grabar', $hora_a_grabar);
         $updateStmt->bindParam(':id_empleado', $id_empleado, PDO::PARAM_INT);
         $updateStmt->bindParam(':fecha', $fecha);
         $updateStmt->execute();

@@ -9,13 +9,27 @@
     ";
     $empleados = $conexion->query($queryEmpleados)->fetchAll(PDO::FETCH_ASSOC);
 
-    // Obtener los últimos 10 fichajes junto con el nombre y apellido del empleado
-    $query = "SELECT Fichaje.fecha, Fichaje.entrada_manana, Fichaje.salida_manana, Fichaje.entrada_tarde, Fichaje.salida_tarde, 
-                    Empleado.nombre, Empleado.apellidos
-            FROM Fichaje
-            INNER JOIN Empleado ON Fichaje.id_empleado = Empleado.id_empleado
-            ORDER BY Fichaje.fecha DESC
-            LIMIT 10";
+    // Obtener los últimos 10 fichajes junto con el nombre y apellido del empleado, ordenados
+    $query = "
+        SELECT 
+            Fichaje.fecha,
+            Fichaje.entrada_manana, 
+            Fichaje.salida_manana, 
+            Fichaje.entrada_tarde, 
+            Fichaje.salida_tarde, 
+            Empleado.nombre, 
+            Empleado.apellidos,
+            GREATEST(
+                COALESCE(Fichaje.entrada_manana, '00:00:00'),
+                COALESCE(Fichaje.salida_manana, '00:00:00'),
+                COALESCE(Fichaje.entrada_tarde, '00:00:00'),
+                COALESCE(Fichaje.salida_tarde, '00:00:00')
+            ) AS ultima_hora_fichada
+        FROM Fichaje
+        INNER JOIN Empleado ON Fichaje.id_empleado = Empleado.id_empleado
+        ORDER BY Fichaje.fecha DESC, ultima_hora_fichada DESC
+        LIMIT 10
+        ";
     $fichajes = $conexion->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
     // Obtener el último fichaje efectuado junto con el nombre y apellido del empleado
@@ -50,7 +64,7 @@
             <li><a href="">Fichajes</a></li>
         </ul>
     </nav>
-    <main> 
+    <main>
         <section class="container-row">
             <div class="container">
                 <h2>Registros libranza, vacaciones, bajas o permisos</h2>

@@ -24,15 +24,17 @@ function generarTablaMes($conexion, $id_empleado, $mes, $anio, $mesesEspanol, $d
     // Obtener fichajes
     $queryFichajes = "
         SELECT 
-            fecha, 
-            DAYOFWEEK(fecha) AS dia_semana,
-            entrada_manana, salida_manana, 
-            entrada_tarde, salida_tarde,
-            TIMESTAMPDIFF(MINUTE, entrada_manana, salida_manana) +
-            TIMESTAMPDIFF(MINUTE, entrada_tarde, salida_tarde) AS horas_trabajadas
-        FROM Fichaje
-        WHERE id_empleado = :id_empleado 
-          AND fecha BETWEEN :primerDia AND :ultimoDia
+        fecha, 
+        DAYOFWEEK(fecha) AS dia_semana,
+        entrada_manana, 
+        salida_manana, 
+        entrada_tarde, 
+        salida_tarde,
+        COALESCE(TIMESTAMPDIFF(MINUTE, entrada_manana, salida_manana), 0) + 
+        COALESCE(TIMESTAMPDIFF(MINUTE, entrada_tarde, salida_tarde), 0) AS horas_trabajadas
+    FROM Fichaje
+    WHERE id_empleado = :id_empleado 
+      AND fecha BETWEEN :primerDia AND :ultimoDia
     ";
     $stmtFichajes = $conexion->prepare($queryFichajes);
     $stmtFichajes->bindParam(':id_empleado', $id_empleado, PDO::PARAM_INT);
